@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"html/template"
 	"log"
@@ -8,10 +9,105 @@ import (
 	"net/http"
 	"sort"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/piquette/finance-go/equity"
 	"github.com/piquette/finance-go/quote"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
+
+var db *sql.DB
+var err error
+
+func init() {
+	db, err = sql.Open("mysql", "root@tcp(localhost:3306)/stock_trader")
+	if err != nil {
+		log.Fatalf("Error connecting to the database: %v", err)
+	}
+}
+
+// Helper functions for user authentication
+func hashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+func checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		hashedPassword, err := hashPassword(password)
+		if err != nil {
+			http.Error(w, "Error hashing password", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = db.Exec("INSERT INTO users (username, password) VALUES (?, ?)", username, hashedPassword)
+		if err != nil {
+			http.Error(w, "Error registering user", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	tmpl, err := template.ParseFiles("templates/register.html")
+	if err != nil {
+		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		var storedHash string
+		err := db.QueryRow("SELECT password FROM users WHERE username = ?", username).Scan(&storedHash)
+		if err != nil {
+			log.Println("Invalid username or password")
+			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+			return
+		}
+
+		if !checkPasswordHash(password, storedHash) {
+			log.Println("Invalid username or password")
+			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+			return
+		}
+
+		// Set cookie with the username
+		cookie := &http.Cookie{
+			Name:  "username",
+			Value: username,
+			Path:  "/",
+			// Secure: true, // Uncomment if using HTTPS
+			HttpOnly: true,
+		}
+		http.SetCookie(w, cookie)
+		log.Println("Set cookie for username:", username)
+
+		// Redirect to the dashboard
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	tmpl, err := template.ParseFiles("templates/login.html")
+	if err != nil {
+		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
 
 // calculateFibonacciLevels calculates the Fibonacci retracement levels
 func calculateFibonacciLevels(high, low float64) map[string]float64 {
@@ -204,6 +300,30 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, resultData)
 }
 
+func dashboardHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("username")
+	if err != nil {
+		log.Println("Username cookie not found, redirecting to login")
+		// If cookie is not found, redirect to login
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	username := cookie.Value
+	log.Println("Username from cookie:", username)
+
+	tmpl, err := template.ParseFiles("templates/dashboard.html")
+	if err != nil {
+		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, struct{ Username string }{Username: username})
+	if err != nil {
+		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("templates/index.html")
@@ -214,8 +334,11 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
-	http.HandleFunc("/quote", quoteHandler)
+	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/dashboard", dashboardHandler)
 
+	http.HandleFunc("/quote", quoteHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	fmt.Println("Server is running on http://localhost:8080")

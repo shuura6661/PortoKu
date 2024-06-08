@@ -3,37 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Trader Results</title>
+    <title>Results</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>Results for {{.Symbol}}</h1>
-    <p>Current Price: ${{printf "%.2f" .CurrentPrice}}</p>
-    <p>52 Week High: ${{printf "%.2f" .FiftyTwoWeekHigh}}</p>
-    <p>52 Week Low: ${{printf "%.2f" .FiftyTwoWeekLow}}</p>
-    <p>Market Cap: ${{printf "%.2f" .MarketCap}}</p>
-    <p>Book Value: ${{printf "%.2f" .BookValue}}</p>
-    
-    {{if .FibonacciLevels}}
-    <h2>Fibonacci Levels:</h2>
-    <ul>
-        {{range .FibonacciLevels}}
-        <li>{{.Level}}: ${{printf "%.2f" .Value}}</li>
-        {{end}}
-    </ul>
-    {{end}}
-
-    {{if .TradeIdeas}}
-    <h2>Trade Ideas:</h2>
-    <ul>
-        {{range .TradeIdeas}}
-        <li>
-            Take Profit {{.Index}}: ${{printf "%.2f" .TakeProfit}} ({{printf "%.2f" .Pips}} pips)
-            <br>RR Ratio: {{printf "%.2f" .RiskRewardRatio}}
-        </li>
-        {{end}}
-    </ul>
-    {{end}}
-    <a href="/" class="back-button">Back</a>
+    <div class="dashboard">
+        <header>
+            <nav>
+                <ul>
+                    <li><a href="/">PortoKu</a></li>
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/portfolio">Portfolio</a></li>
+                </ul>
+            </nav>
+        </header>
+        <div class="dashboard-content">
+            <div class="result-section">
+                <h2>Results for {{.Symbol}}</h2>
+                <div class="result-details">
+                    <p>Current Price: ${{.CurrentPrice}}</p>
+                    <p>52-Week High: ${{.FiftyTwoWeekHigh}}</p>
+                    <p>52-Week Low: ${{.FiftyTwoWeekLow}}</p>
+                    <p>Market Cap: ${{.MarketCap}}</p>
+                    <p>Book Value: ${{.BookValue}}</p>
+                </div>
+                <div class="fibonacci-levels">
+                    <h3>Fibonacci Levels</h3>
+                    <ul>
+                        {{range .FibonacciLevels}}
+                        <li>{{.Level}}: ${{.Value}}</li>
+                        {{end}}
+                    </ul>
+                </div>
+                <div class="trade-ideas">
+                    <h3>Trade Ideas</h3>
+                    <ul>
+                        {{range .TradeIdeas}}
+                        <li>Index: {{.Index}}, Take Profit: ${{.TakeProfit}}, Pips: ${{.Pips}}, Risk/Reward Ratio: {{.RiskRewardRatio}}</li>
+                        {{end}}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/scripts.js"></script>
 </body>
 </html>

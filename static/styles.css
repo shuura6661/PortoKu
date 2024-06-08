@@ -1,14 +1,41 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #2980b9;
+    background-color: #f4f4f4;
     color: #333;
     margin: 0;
     padding: 0;
 }
 
-h1, h2 {
-    color: #fff;
+h1, h2, h3 {
+    color: #333;
     text-align: center;
+}
+
+.auth-options {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.auth-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.auth-button {
+    display: inline-block;
+    padding: 15px 25px;
+    background-color: #2980b9;
+    color: #fff;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.auth-button:hover {
+    background-color: #2ecc71;
 }
 
 form {
@@ -26,7 +53,7 @@ label {
     font-weight: bold;
 }
 
-input[type="text"], select {
+input[type="text"], input[type="password"], select {
     width: 100%;
     padding: 10px;
     margin: 5px 0 20px;
@@ -51,51 +78,162 @@ input[type="submit"]:hover {
     background: linear-gradient(135deg, #2ecc71, #2980b9);
 }
 
-p, ul {
-    max-width: 600px;
+.dashboard {
+    max-width: 1200px;
     margin: 20px auto;
-    padding: 0 20px;
-    color: #333;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.result-text {
-    color: #fff; /* Changed text color to white */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
 }
 
-ul {
-    list-style-type: none;
+.header-left {
+    flex: 1;
+}
+
+nav {
+    flex: 2;
+}
+
+nav ul {
+    display: flex;
+    justify-content: flex-end;
+    list-style: none;
     padding: 0;
 }
 
-li {
-    background-color: #ffffff;
-    margin: 10px 0;
-    padding: 15px;
-    border-radius: 4px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+nav ul li {
+    margin: 0 15px;
 }
 
-li:hover {
-    background-color: #ecf0f1;
-    transition: background-color 0.3s;
+nav ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    font-size: 16px;
+    transition: color 0.3s;
 }
 
-.back-button {
-    display: block;
-    width: 200px;
-    margin: 20px auto;
-    padding: 12px;
-    text-align: center;
-    background-color: #e74c3c;
+nav ul li a:hover {
+    color: #2980b9;
+}
+
+.dashboard-content {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    flex: 1;
+    margin: 10px;
+    padding: 20px;
+    background-color: #2980b9;
     color: #fff;
-    border: none;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.chart, .overview, .result-section {
+    width: 100%;
+    margin: 10px 0;
+}
+
+.overview table, .result-section table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.overview th, .overview td, .result-section th, .result-section td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.overview th, .result-section th {
+    background-color: #2980b9;
+    color: white;
+}
+
+.top-gainers-losers {
+    display: flex;
+    justify-content: space-between;
+}
+
+.top-gainers, .top-losers {
+    flex: 1;
+    margin: 10px;
+    padding: 20px;
+    background-color: #ecf0f1;
+    border-radius: 8px;
+}
+
+.top-gainers h2, .top-losers h2 {
+    color: #2980b9;
+}
+
+.app-promotion {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.app-promotion a {
+    display: inline-block;
+    margin: 10px 0;
+    padding: 10px 20px;
+    background-color: #2980b9;
+    color: #fff;
     border-radius: 4px;
     text-decoration: none;
-    font-size: 16px;
-    cursor: pointer;
+}
+
+.app-promotion a:hover {
+    background-color: #2ecc71;
     transition: background-color 0.3s;
 }
 
-.back-button:hover {
-    background-color: #c0392b;
+.search-market {
+    width: 100%;
+    margin: 20px 0;
+}
+
+.search-market form {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.search-market h2 {
+    margin-bottom: 20px;
+    color: #2980b9;
+    text-align: center;
+}
+
+.fibonacci-levels ul, .trade-ideas ul {
+    list-style: none;
+    padding: 0;
+}
+
+.fibonacci-levels ul li, .trade-ideas ul li {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #f4f4f4;
+    border-radius: 4px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
 }

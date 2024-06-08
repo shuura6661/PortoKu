@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <div class="header-left">
+                <h1>👋 Hi {{.Username}}, Welcome Back</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/">PortoKu</a></li>
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/portfolio">Portfolio</a></li>
+                </ul>
+            </nav>
+        </header>
+        <div class="dashboard-content">
+            <div class="stats">
+                <div class="stat-box">Today's Return: $39.345</div>
+                <div class="stat-box">Total Return: $42.345</div>
+                <div class="stat-box">Revenue Return: $52.345</div>
+            </div>
+            <div class="search-market">
+                <h2>Search Market</h2>
+                <form action="/quote" method="get">
+                    <label for="symbol">Stock Symbol:</label>
+                    <input type="text" id="symbol" name="symbol" required>
+                    <br>
+                    <label for="choice">Choose an option:</label>
+                    <select id="choice" name="choice" required>
+                        <option value="1">Symbol Viewer</option>
+                        <option value="2">AI Features of Fibonacci levels</option>
+                    </select>
+                    <br>
+                    <input type="submit" value="Submit">
+                </form>
+            </div>
+            <div class="chart">
+                <!-- Chart content here -->
+                <img src="/static/chart.png" alt="Stock Chart">
+            </div>
+            <div class="overview">
+                <!-- Overview content here -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stock</th>
+                            <th>Price</th>
+                            <th>Volume</th>
+                            <th>Market Cap</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Spotify (NYSE: SPOT)</td>
+                            <td>$297.40</td>
+                            <td>45,356</td>
+                            <td>$58.63B</td>
+                        </tr>
+                        <tr>
+                            <td>Uber (NYSE: UBER)</td>
+                            <td>$43.55</td>
+                            <td>100,456</td>
+                            <td>$86.65B</td>
+                        </tr>
+                        <tr>
+                            <td>Amazon (NASDAQ: AMZN)</td>
+                            <td>$125.68</td>
+                            <td>70,245</td>
+                            <td>$1.26T</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="top-gainers-losers">
+                <div class="top-gainers">
+                    <h2>Top Gainers</h2>
+                    <!-- Top gainers list here -->
+                </div>
+                <div class="top-losers">
+                    <h2>Top Losers</h2>
+                    <!-- Top losers list here -->
+                </div>
+            </div>
+            <div class="app-promotion">
+                <h2>Download Our Mobile App Now!</h2>
+                <a href="#">Get Mobile App</a>
+            </div>
+        </div>
+    </div>
+    <script src="/static/scripts.js"></script>
+</body>
+</html>

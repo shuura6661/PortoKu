@@ -3,22 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Trader</title>
+    <title>Stock Trader - Welcome</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>Stock Trader</h1>
-    <form action="/quote" method="get">
-        <label for="symbol">Stock Symbol:</label>
-        <input type="text" id="symbol" name="symbol" required>
-        <br>
-        <label for="choice">Choose an option:</label>
-        <select id="choice" name="choice" required>
-            <option value="1">Symbol Viewer</option>
-            <option value="2">AI Features of Fibonacci levels</option>
-        </select>
-        <br>
-        <input type="submit" value="Submit">
-    </form>
+    <h1>Welcome to Stock Trader</h1>
+    <div class="auth-options">
+        <h2>Please Login or Register to Continue</h2>
+        <div class="auth-buttons">
+            <a href="/login" class="auth-button">Login</a>
+            <a href="/register" class="auth-button">Register</a>
+        </div>
+    </div>
 </body>
 </html>
