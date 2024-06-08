@@ -324,6 +324,31 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func portfolioHandler(w http.ResponseWriter, r *http.Request) {
+	symbols := []string{"AAPL", "META", "GME", "AMZN", "GC=F"}
+	var portfolio []ResultData
+
+	for _, symbol := range symbols {
+		data, err := displaySymbolViewer(symbol)
+		if err != nil {
+			http.Error(w, "Error fetching portfolio data: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		portfolio = append(portfolio, data)
+	}
+
+	tmpl, err := template.ParseFiles("templates/portfolio.html")
+	if err != nil {
+		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, portfolio)
+	if err != nil {
+		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("templates/index.html")
@@ -337,6 +362,7 @@ func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/dashboard", dashboardHandler)
+	http.HandleFunc("/portfolio", portfolioHandler)
 
 	http.HandleFunc("/quote", quoteHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))

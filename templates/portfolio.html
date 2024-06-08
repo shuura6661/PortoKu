@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <div class="header-left">
+                <h1>👋 Hi, Welcome to Your Portfolio</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/">PortoKu</a></li>
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/portfolio">Portfolio</a></li>
+                </ul>
+            </nav>
+        </header>
+        <div class="dashboard-content">
+            <h2>Your Portfolio</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Current Price</th>
+                        <th>52-Week High</th>
+                        <th>52-Week Low</th>
+                        <th>Market Cap</th>
+                        <th>Book Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .}}
+                    <tr>
+                        <td>{{.Symbol}}</td>
+                        <td>${{.CurrentPrice}}</td>
+                        <td>${{.FiftyTwoWeekHigh}}</td>
+                        <td>${{.FiftyTwoWeekLow}}</td>
+                        <td>${{.MarketCap}}</td>
+                        <td>${{.BookValue}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="/static/scripts.js"></script>
+</body>
+</html>
