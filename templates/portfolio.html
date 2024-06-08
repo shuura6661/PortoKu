@@ -9,9 +9,6 @@
 <body>
     <div class="dashboard">
         <header>
-            <div class="header-left">
-                <h1>👋 Hi, Welcome to Your Portfolio</h1>
-            </div>
             <nav>
                 <ul>
                     <li><a href="/">PortoKu</a></li>
@@ -26,26 +23,27 @@
                 <thead>
                     <tr>
                         <th>Symbol</th>
+                        <th>Total Lot</th>
+                        <th>Average Price</th>
+                        <th>Total Invested</th>
                         <th>Current Price</th>
-                        <th>52-Week High</th>
-                        <th>52-Week Low</th>
-                        <th>Market Cap</th>
-                        <th>Book Value</th>
+                        <th>PnL</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .}}
                     <tr>
                         <td>{{.Symbol}}</td>
+                        <td>{{.Lot}}</td>
+                        <td>${{.AveragePrice}}</td>
+                        <td>${{.TotalInvested}}</td>
                         <td>${{.CurrentPrice}}</td>
-                        <td>${{.FiftyTwoWeekHigh}}</td>
-                        <td>${{.FiftyTwoWeekLow}}</td>
-                        <td>${{.MarketCap}}</td>
-                        <td>${{.BookValue}}</td>
+                        <td>${{.PnL}}</td>
                     </tr>
                     {{end}}
                 </tbody>
             </table>
+            <a href="/add_symbol" class="auth-button">Add New Symbol</a>
         </div>
     </div>
     <script src="/static/scripts.js"></script>

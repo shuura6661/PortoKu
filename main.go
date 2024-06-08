@@ -392,17 +392,91 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func portfolioHandler(w http.ResponseWriter, r *http.Request) {
-	symbols := []string{"AAPL", "META", "GME", "AMZN", "GC=F"}
-	var portfolio []ResultData
+func addSymbolHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("username")
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	username := cookie.Value
 
-	for _, symbol := range symbols {
-		data, err := displaySymbolViewer(symbol)
+	if r.Method == "POST" {
+		symbol := r.FormValue("symbol")
+		lot := r.FormValue("lot")
+		averagePrice := r.FormValue("average_price")
+		totalInvested := r.FormValue("total_invested")
+
+		_, err := db.Exec("INSERT INTO portfolios (username, symbol, lot, average_price, total_invested) VALUES (?, ?, ?, ?, ?)", username, symbol, lot, averagePrice, totalInvested)
 		if err != nil {
-			http.Error(w, "Error fetching portfolio data: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Error adding symbol to portfolio", http.StatusInternalServerError)
 			return
 		}
-		portfolio = append(portfolio, data)
+
+		http.Redirect(w, r, "/portfolio", http.StatusSeeOther)
+		return
+	}
+
+	tmpl, err := template.ParseFiles("templates/add_symbol.html")
+	if err != nil {
+		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
+type PortfolioData struct {
+	Symbol        string
+	Lot           int
+	AveragePrice  float64
+	TotalInvested float64
+	CurrentPrice  float64
+	PnL           float64
+}
+
+func portfolioHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("username")
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	username := cookie.Value
+
+	rows, err := db.Query("SELECT symbol, lot, average_price, total_invested FROM portfolios WHERE username = ?", username)
+	if err != nil {
+		http.Error(w, "Error fetching portfolio data", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var portfolio []PortfolioData
+
+	for rows.Next() {
+		var symbol string
+		var lot int
+		var averagePrice, totalInvested float64
+		err := rows.Scan(&symbol, &lot, &averagePrice, &totalInvested)
+		if err != nil {
+			http.Error(w, "Error scanning portfolio data", http.StatusInternalServerError)
+			return
+		}
+
+		q, err := quote.Get(symbol)
+		if err != nil {
+			http.Error(w, "Error fetching quote data", http.StatusInternalServerError)
+			return
+		}
+
+		currentPrice := q.RegularMarketPrice
+		pnl := float64(lot) * (currentPrice - averagePrice)
+
+		portfolio = append(portfolio, PortfolioData{
+			Symbol:        symbol,
+			Lot:           lot,
+			AveragePrice:  averagePrice,
+			TotalInvested: totalInvested,
+			CurrentPrice:  currentPrice,
+			PnL:           pnl,
+		})
 	}
 
 	tmpl, err := template.ParseFiles("templates/portfolio.html")
@@ -431,6 +505,7 @@ func main() {
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/dashboard", dashboardHandler)
 	http.HandleFunc("/portfolio", portfolioHandler)
+	http.HandleFunc("/add_symbol", addSymbolHandler)
 
 	http.HandleFunc("/quote", quoteHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Symbol</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <nav>
+                <ul>
+                    <li><a href="/">PortoKu</a></li>
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/portfolio">Portfolio</a></li>
+                </ul>
+            </nav>
+        </header>
+        <div class="dashboard-content">
+            <h2>Add Symbol to Portfolio</h2>
+            <form action="/add_symbol" method="post">
+                <label for="symbol">Symbol:</label>
+                <input type="text" id="symbol" name="symbol" required>
+                <label for="lot">Total Lot:</label>
+                <input type="number" id="lot" name="lot" required>
+                <label for="average_price">Average Price:</label>
+                <input type="text" id="average_price" name="average_price" required>
+                <label for="total_invested">Total Invested:</label>
+                <input type="text" id="total_invested" name="total_invested" required>
+                <input type="submit" value="Add Symbol">
+            </form>
+        </div>
+    </div>
+    <script src="/static/scripts.js"></script>
+</body>
+</html>

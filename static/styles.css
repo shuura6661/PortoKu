@@ -53,7 +53,7 @@ label {
     font-weight: bold;
 }
 
-input[type="text"], input[type="password"], select {
+input[type="text"], input[type="password"], input[type="number"], select {
     width: 100%;
     padding: 10px;
     margin: 5px 0 20px;
@@ -245,4 +245,21 @@ nav ul li a:hover {
 
 .result-details, .fibonacci-levels, .trade-ideas {
     margin: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #2980b9;
+    color: white;
 }
