@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Trader Results</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Results for {{.Symbol}}</h1>
+    <p>Current Price: ${{printf "%.2f" .CurrentPrice}}</p>
+    <p>52 Week High: ${{printf "%.2f" .FiftyTwoWeekHigh}}</p>
+    <p>52 Week Low: ${{printf "%.2f" .FiftyTwoWeekLow}}</p>
+    <p>Market Cap: ${{printf "%.2f" .MarketCap}}</p>
+    <p>Book Value: ${{printf "%.2f" .BookValue}}</p>
+    
+    {{if .FibonacciLevels}}
+    <h2>Fibonacci Levels:</h2>
+    <ul>
+        {{range .FibonacciLevels}}
+        <li>{{.Level}}: ${{printf "%.2f" .Value}}</li>
+        {{end}}
+    </ul>
+    {{end}}
+
+    {{if .TradeIdeas}}
+    <h2>Trade Ideas:</h2>
+    <ul>
+        {{range .TradeIdeas}}
+        <li>
+            Take Profit {{.Index}}: ${{printf "%.2f" .TakeProfit}} ({{printf "%.2f" .Pips}} pips)
+            <br>RR Ratio: {{printf "%.2f" .RiskRewardRatio}}
+        </li>
+        {{end}}
+    </ul>
+    {{end}}
+    <a href="/" class="back-button">Back</a>
+</body>
+</html>
