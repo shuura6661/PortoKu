@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -8,8 +9,12 @@ import (
 	"math"
 	"net/http"
 	"sort"
+	"time"
 
+	"github.com/go-echarts/go-echarts/charts"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/piquette/finance-go/chart"
+	"github.com/piquette/finance-go/datetime"
 	"github.com/piquette/finance-go/equity"
 	"github.com/piquette/finance-go/quote"
 	"github.com/sirupsen/logrus"
@@ -151,6 +156,60 @@ type ResultData struct {
 	BookValue        float64
 	FibonacciLevels  []FibLevel
 	TradeIdeas       []TradeIdea
+	ChartHTML        template.HTML
+}
+
+// Chart rendering functions
+func fetchChartData(sym string) ([]string, []float64) {
+	now := time.Now()
+	yearAgo := now.AddDate(-1, 0, 0)
+
+	p := &chart.Params{
+		Symbol:   sym,
+		Start:    datetime.New(&yearAgo),
+		End:      datetime.New(&now),
+		Interval: datetime.OneDay,
+	}
+
+	iter := chart.Get(p)
+	count := iter.Count()
+
+	x := make([]string, count)
+	y := make([]float64, count)
+
+	var date string
+	var price float64
+
+	i := 0
+	for iter.Next() {
+		d := iter.Bar()
+		price, _ = d.Close.Round(2).Float64()
+		date = time.Unix(int64(d.Timestamp), 0).Format("2006-01-02")
+
+		x[i] = date
+		y[i] = price
+		i++
+	}
+
+	return x, y
+}
+
+func renderChart(symbol string) template.HTML {
+	line := charts.NewLine()
+	line.SetGlobalOptions(charts.TitleOpts{Title: ""})
+
+	x, y := fetchChartData(symbol)
+
+	line.AddXAxis(x)
+	line.AddYAxis(symbol, y)
+
+	chartHTML := charts.NewPage()
+	chartHTML.Add(line)
+
+	var buffer bytes.Buffer
+	chartHTML.Render(&buffer)
+
+	return template.HTML(buffer.String())
 }
 
 func displaySymbolViewer(smbl string) (ResultData, error) {
@@ -179,6 +238,7 @@ func displaySymbolViewer(smbl string) (ResultData, error) {
 		BookValue:        float64(e.BookValue),
 		FibonacciLevels:  nil,
 		TradeIdeas:       nil,
+		ChartHTML:        renderChart(smbl),
 	}, nil
 }
 
@@ -257,6 +317,7 @@ func displayFibonacciLevels(smbl string) (ResultData, error) {
 		FiftyTwoWeekLow:  low,
 		FibonacciLevels:  fibSlice,
 		TradeIdeas:       tradeIdeas,
+		ChartHTML:        renderChart(smbl),
 	}, nil
 }
 
@@ -275,12 +336,15 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	var resultData ResultData
 	var err error
+	var tmpl string
 
 	switch choice {
 	case "1":
 		resultData, err = displaySymbolViewer(symbol)
+		tmpl = "templates/symbol_viewer.html"
 	case "2":
 		resultData, err = displayFibonacciLevels(symbol)
+		tmpl = "templates/fibonacci_levels.html"
 	default:
 		http.Error(w, "Invalid choice", http.StatusBadRequest)
 		return
@@ -291,13 +355,17 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles("templates/result.html")
+	t, err := template.ParseFiles(tmpl)
 	if err != nil {
 		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	tmpl.Execute(w, resultData)
+	err = t.Execute(w, resultData)
+	if err != nil {
+		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func dashboardHandler(w http.ResponseWriter, r *http.Request) {

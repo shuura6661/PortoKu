@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symbol Viewer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <nav>
+                <ul>
+                    <li><a href="/">PortoKu</a></li>
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/portfolio">Portfolio</a></li>
+                </ul>
+            </nav>
+        </header>
+        <div class="dashboard-content">
+            <div class="result-section">
+                <h2>Results for {{.Symbol}}</h2>
+                <div class="chart">{{.ChartHTML}}</div>
+                <div class="result-details">
+                    <p>Current Price: ${{.CurrentPrice}}</p>
+                    <p>52-Week High: ${{.FiftyTwoWeekHigh}}</p>
+                    <p>52-Week Low: ${{.FiftyTwoWeekLow}}</p>
+                    <p>Market Cap: ${{.MarketCap}}</p>
+                    <p>Book Value: ${{.BookValue}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/scripts.js"></script>
+</body>
+</html>

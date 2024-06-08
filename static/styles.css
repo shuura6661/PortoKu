@@ -152,6 +152,11 @@ nav ul li a:hover {
 .chart, .overview, .result-section {
     width: 100%;
     margin: 10px 0;
+    text-align: center;
+}
+
+.result-section {
+    text-align: left;
 }
 
 .overview table, .result-section table {
@@ -236,4 +241,8 @@ nav ul li a:hover {
     background-color: #f4f4f4;
     border-radius: 4px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.result-details, .fibonacci-levels, .trade-ideas {
+    margin: 20px;
 }
