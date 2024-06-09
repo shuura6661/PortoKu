@@ -627,9 +627,10 @@ func userProfileHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	username := cookie.Value
+	currentUsername := cookie.Value
 
 	if r.Method == "POST" {
+		newUsername := r.FormValue("username")
 		email := r.FormValue("email")
 		phone := r.FormValue("phone")
 		birthdate := r.FormValue("birthdate")
@@ -639,16 +640,72 @@ func userProfileHandler(w http.ResponseWriter, r *http.Request) {
 		favSymbol := r.FormValue("fav_symbol")
 		wiseWord := r.FormValue("wise_word")
 
-		_, err = db.Exec(`UPDATE users 
-            SET email = ?, phone = ?, birthdate = ?, investment_profile = ?, 
-            investment_goals = ?, risk_tolerance = ?, fav_symbol = ?, wise_word = ?
-            WHERE username = ?`, email, phone, birthdate, investmentProfile, investmentGoals, riskTolerance, favSymbol, wiseWord, username)
+		// Start a transaction
+		tx, err := db.Begin()
 		if err != nil {
-			log.Println("Error updating user profile:", err)
+			log.Println("Error starting transaction:", err)
 			http.Error(w, "Error updating user profile", http.StatusInternalServerError)
 			return
 		}
 
+		// Temporarily remove foreign key constraint
+		_, err = tx.Exec("SET FOREIGN_KEY_CHECKS=0")
+		if err != nil {
+			tx.Rollback()
+			log.Println("Error disabling foreign key checks:", err)
+			http.Error(w, "Error updating user profile", http.StatusInternalServerError)
+			return
+		}
+
+		// Update the username in the portfolios table
+		_, err = tx.Exec(`UPDATE portfolios SET username = ? WHERE username = ?`, newUsername, currentUsername)
+		if err != nil {
+			tx.Rollback()
+			log.Println("Error updating portfolios table:", err)
+			http.Error(w, "Error updating user profile", http.StatusInternalServerError)
+			return
+		}
+
+		// Update the user profile in the users table
+		_, err = tx.Exec(`UPDATE users 
+            SET username = ?, email = ?, phone = ?, birthdate = ?, investment_profile = ?, 
+            investment_goals = ?, risk_tolerance = ?, fav_symbol = ?, wise_word = ?
+            WHERE username = ?`, newUsername, email, phone, birthdate, investmentProfile, investmentGoals, riskTolerance, favSymbol, wiseWord, currentUsername)
+		if err != nil {
+			tx.Rollback()
+			log.Println("Error updating users table:", err)
+			http.Error(w, "Error updating user profile", http.StatusInternalServerError)
+			return
+		}
+
+		// Re-enable foreign key constraint
+		_, err = tx.Exec("SET FOREIGN_KEY_CHECKS=1")
+		if err != nil {
+			tx.Rollback()
+			log.Println("Error enabling foreign key checks:", err)
+			http.Error(w, "Error updating user profile", http.StatusInternalServerError)
+			return
+		}
+
+		// Commit the transaction
+		err = tx.Commit()
+		if err != nil {
+			log.Println("Error committing transaction:", err)
+			http.Error(w, "Error updating user profile", http.StatusInternalServerError)
+			return
+		}
+
+		// Update the username cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:  "username",
+			Value: newUsername,
+			Path:  "/",
+			// Secure: true, // Uncomment if using HTTPS
+			HttpOnly: true,
+		})
+		log.Println("Updated cookie for username:", newUsername)
+
+		// Redirect to the user account page
 		http.Redirect(w, r, "/user_account", http.StatusSeeOther)
 		return
 	}
@@ -674,7 +731,7 @@ func userProfileHandler(w http.ResponseWriter, r *http.Request) {
         risk_tolerance, 
         fav_symbol, 
         wise_word 
-        FROM users WHERE username = ?`, username).Scan(
+        FROM users WHERE username = ?`, currentUsername).Scan(
 		&user.Username, &user.Email, &user.Phone, &user.Birthdate, &user.InvestmentProfile, &user.InvestmentGoals, &user.RiskTolerance, &user.FavSymbol, &user.WiseWord)
 	if err != nil {
 		log.Println("Error fetching user data:", err)
