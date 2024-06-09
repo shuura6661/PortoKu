@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-echarts/go-echarts/charts"
@@ -149,22 +150,18 @@ type TradeIdea struct {
 }
 
 type ResultData struct {
-	Symbol           string
-	CurrentPrice     float64
-	FiftyTwoWeekHigh float64
-	FiftyTwoWeekLow  float64
-	MarketCap        float64
-	BookValue        float64
-	FibonacciLevels  []FibLevel
-	TradeIdeas       []TradeIdea
-	ChartHTML        template.HTML
-}
-
-type FavoriteSymbolData struct {
-	ShortName    string
-	CurrentPrice float64
-	Volume       int64
-	MarketCap    string
+	Symbol                     string
+	CurrentPrice               float64
+	FiftyTwoWeekHigh           float64
+	FiftyTwoWeekLow            float64
+	MarketCap                  float64
+	RegularMarketDayLow        float64
+	RegularMarketDayHigh       float64
+	RegularMarketChangePercent float64
+	RegularMarketVolume        int64
+	FibonacciLevels            []FibLevel
+	TradeIdeas                 []TradeIdea
+	ChartHTML                  template.HTML
 }
 
 // Chart rendering functions
@@ -238,15 +235,16 @@ func displaySymbolViewer(smbl string) (ResultData, error) {
 	}
 
 	return ResultData{
-		Symbol:           q.ShortName,
-		CurrentPrice:     currentPrice,
-		FiftyTwoWeekHigh: q.FiftyTwoWeekHigh,
-		FiftyTwoWeekLow:  q.FiftyTwoWeekLow,
-		MarketCap:        float64(e.MarketCap),
-		BookValue:        float64(e.BookValue),
-		FibonacciLevels:  nil,
-		TradeIdeas:       nil,
-		ChartHTML:        renderChart(smbl),
+		Symbol:                     q.ShortName,
+		CurrentPrice:               currentPrice,
+		FiftyTwoWeekHigh:           q.FiftyTwoWeekHigh,
+		FiftyTwoWeekLow:            q.FiftyTwoWeekLow,
+		MarketCap:                  float64(e.MarketCap),
+		RegularMarketDayLow:        q.RegularMarketDayLow,
+		RegularMarketDayHigh:       q.RegularMarketDayHigh,
+		RegularMarketChangePercent: q.RegularMarketChangePercent,
+		RegularMarketVolume:        int64(q.RegularMarketVolume),
+		ChartHTML:                  renderChart(smbl),
 	}, nil
 }
 
@@ -254,6 +252,12 @@ func displayFibonacciLevels(smbl string) (ResultData, error) {
 	q, err := quote.Get(smbl)
 	if err != nil {
 		logrus.Fatalf("Error fetching quote: %v", err)
+		return ResultData{}, err
+	}
+
+	e, err := equity.Get(smbl)
+	if err != nil {
+		logrus.Fatalf("Error fetching equity data: %v", err)
 		return ResultData{}, err
 	}
 
@@ -319,13 +323,18 @@ func displayFibonacciLevels(smbl string) (ResultData, error) {
 	}
 
 	return ResultData{
-		Symbol:           q.ShortName,
-		CurrentPrice:     currentPrice,
-		FiftyTwoWeekHigh: high,
-		FiftyTwoWeekLow:  low,
-		FibonacciLevels:  fibSlice,
-		TradeIdeas:       tradeIdeas,
-		ChartHTML:        renderChart(smbl),
+		Symbol:                     q.ShortName,
+		CurrentPrice:               currentPrice,
+		FiftyTwoWeekHigh:           high,
+		FiftyTwoWeekLow:            low,
+		MarketCap:                  float64(e.MarketCap),
+		RegularMarketDayLow:        q.RegularMarketDayLow,
+		RegularMarketDayHigh:       q.RegularMarketDayHigh,
+		RegularMarketChangePercent: q.RegularMarketChangePercent,
+		RegularMarketVolume:        int64(q.RegularMarketVolume),
+		FibonacciLevels:            fibSlice,
+		TradeIdeas:                 tradeIdeas,
+		ChartHTML:                  renderChart(smbl),
 	}, nil
 }
 
@@ -380,6 +389,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil {
 		log.Println("Username cookie not found, redirecting to login")
+		// If cookie is not found, redirect to login
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
@@ -388,67 +398,76 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Username from cookie:", username)
 
 	var user struct {
-		Username string
-		WiseWord string
+		Username        string
+		InvestmentGoals float64
+		WiseWord        sql.NullString
+		FavSymbol       sql.NullString
 	}
 
-	err = db.QueryRow("SELECT username, wise_word FROM users WHERE username = ?", username).Scan(&user.Username, &user.WiseWord)
+	err = db.QueryRow(`SELECT username, investment_goals, wise_word, fav_symbol FROM users WHERE username = ?`, username).Scan(
+		&user.Username, &user.InvestmentGoals, &user.WiseWord, &user.FavSymbol)
 	if err != nil {
 		log.Println("Error fetching user data:", err)
 		http.Error(w, "Error fetching user data", http.StatusInternalServerError)
 		return
 	}
 
-	rows, err := db.Query("SELECT fav_symbol FROM users WHERE username = ?", username)
+	// Split the favorite symbols
+	favSymbols := split(user.FavSymbol.String, ",")
+
+	var favoriteSymbols []ResultData
+	for _, sym := range favSymbols {
+		result, err := displaySymbolViewer(sym)
+		if err == nil {
+			favoriteSymbols = append(favoriteSymbols, result)
+		}
+	}
+
+	var totalInvested float64
+	var totalPnL float64
+	rows, err := db.Query("SELECT total_invested, pnl FROM portfolios WHERE username = ?", username)
 	if err != nil {
-		http.Error(w, "Error fetching favorite symbols", http.StatusInternalServerError)
+		log.Println("Error fetching portfolio data:", err)
+		http.Error(w, "Error fetching portfolio data", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	var favSymbols []string
 	for rows.Next() {
-		var favSymbol string
-		err := rows.Scan(&favSymbol)
+		var totalInvestedVal, pnlVal float64
+		err := rows.Scan(&totalInvestedVal, &pnlVal)
 		if err != nil {
-			http.Error(w, "Error scanning favorite symbols", http.StatusInternalServerError)
+			log.Println("Error scanning portfolio data:", err)
+			http.Error(w, "Error scanning portfolio data", http.StatusInternalServerError)
 			return
 		}
-		favSymbols = append(favSymbols, favSymbol)
-	}
-
-	var favoriteSymbols []FavoriteSymbolData
-	for _, symbol := range favSymbols {
-		q, err := quote.Get(symbol)
-		if err != nil {
-			log.Println("Error fetching quote data:", err)
-			continue
-		}
-		e, err := equity.Get(symbol)
-		if err != nil {
-			log.Println("Error fetching equity data:", err)
-			continue
-		}
-
-		favoriteSymbols = append(favoriteSymbols, FavoriteSymbolData{
-			ShortName:    q.ShortName,
-			CurrentPrice: q.RegularMarketPrice,
-			Volume:       int64(q.RegularMarketVolume),
-			MarketCap:    fmt.Sprintf("$%.2fB", float64(e.MarketCap)/1e9),
-		})
+		totalInvested += totalInvestedVal
+		totalPnL += pnlVal
 	}
 
 	data := struct {
 		Username        string
+		TotalInvested   float64
+		PnL             float64
+		InvestmentGoals float64
 		WiseWord        string
-		FavoriteSymbols []FavoriteSymbolData
+		FavoriteSymbols []ResultData
 	}{
 		Username:        user.Username,
-		WiseWord:        user.WiseWord,
+		TotalInvested:   totalInvested,
+		PnL:             totalPnL,
+		InvestmentGoals: user.InvestmentGoals,
+		WiseWord:        user.WiseWord.String,
 		FavoriteSymbols: favoriteSymbols,
 	}
 
-	tmpl, err := template.ParseFiles("templates/dashboard.html")
+	funcMap := template.FuncMap{
+		"subtract": func(a, b float64) float64 {
+			return a - b
+		},
+	}
+
+	tmpl, err := template.New("dashboard.html").Funcs(funcMap).ParseFiles("templates/dashboard.html")
 	if err != nil {
 		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -864,4 +883,11 @@ func main() {
 
 	fmt.Println("Server is running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func split(input string, delimiter string) []string {
+	if input == "" {
+		return []string{}
+	}
+	return strings.Split(input, delimiter)
 }

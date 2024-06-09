@@ -89,31 +89,27 @@ input[type="submit"]:hover {
 
 header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: flex-start;
     margin-bottom: 30px;
 }
 
-.header-left {
+.top-nav {
     flex: 1;
 }
 
-nav {
-    flex: 2;
-}
-
-nav ul {
+.top-nav ul {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
     list-style: none;
     padding: 0;
 }
 
-nav ul li {
+.top-nav ul li {
     margin: 0 15px;
 }
 
-nav ul li a {
+.top-nav ul li a {
     text-decoration: none;
     color: #333;
     font-weight: bold;
@@ -121,8 +117,12 @@ nav ul li a {
     transition: color 0.3s;
 }
 
-nav ul li a:hover {
+.top-nav ul li a:hover {
     color: #2980b9;
+}
+
+.header-left {
+    flex: 2;
 }
 
 .dashboard-content {
@@ -215,6 +215,7 @@ nav ul li a:hover {
 .search-market {
     width: 100%;
     margin: 20px 0;
+    text-align: right;
 }
 
 .search-market form {
@@ -227,7 +228,6 @@ nav ul li a:hover {
 .search-market h2 {
     margin-bottom: 20px;
     color: #2980b9;
-    text-align: center;
 }
 
 .fibonacci-levels ul, .trade-ideas ul {
