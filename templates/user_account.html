@@ -5,42 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Account</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <script>
+        function showSuccessMessage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('updated') && urlParams.get('updated') === 'true') {
+                document.getElementById('success-message').style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', showSuccessMessage);
+    </script>
 </head>
 <body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">PortoKu</a></li>
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/portfolio">Portfolio</a></li>
+            </ul>
+        </nav>
+    </header>
     <h1>User Account</h1>
-    <form action="/user_account" method="post">
-        <label for="username">Username:</label>
+    <div id="success-message" style="display:none; color: green; text-align: center; margin-bottom: 20px;">
+        Account Updated Successfully
+    </div>
+    <form action="/user_account" method="post" onsubmit="return validateEmail()">
+        <label for="username">Username</label>
         <input type="text" id="username" name="username" value="{{.Username}}" required>
         <br>
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" value="{{if .Email}}{{.Email}}{{end}}">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="{{if .Email}}{{.Email}}{{end}}" required>
         <br>
-        <label for="phone">Phone:</label>
+        <label for="phone">Phone</label>
         <input type="text" id="phone" name="phone" value="{{if .Phone}}{{.Phone}}{{end}}">
         <br>
-        <label for="birthdate">Birthdate:</label>
+        <label for="birthdate">Birthdate</label>
         <input type="date" id="birthdate" name="birthdate" value="{{if .Birthdate}}{{.Birthdate}}{{end}}">
         <br>
-        <label for="investment_profile">Investment Profile:</label>
+        <label for="investment_profile">Investment Profile</label>
         <select id="investment_profile" name="investment_profile">
             <option value="Conservative" {{if eq .InvestmentProfile "Conservative"}}selected{{end}}>Conservative</option>
             <option value="Moderate" {{if eq .InvestmentProfile "Moderate"}}selected{{end}}>Moderate</option>
             <option value="Aggressive" {{if eq .InvestmentProfile "Aggressive"}}selected{{end}}>Aggressive</option>
         </select>
         <br>
-        <label for="investment_goals">Investment Goals:</label>
+        <label for="investment_goals">Investment Goals</label>
         <input type="number" step="0.01" id="investment_goals" name="investment_goals" value="{{.InvestmentGoals}}">
         <br>
-        <label for="risk_tolerance">Risk Tolerance (%):</label>
+        <label for="risk_tolerance">Risk Tolerance (%)</label>
         <input type="number" step="0.01" id="risk_tolerance" name="risk_tolerance" value="{{.RiskTolerance}}">
         <br>
-        <label for="fav_symbol">Favorite Symbol(s):</label>
+        <label for="fav_symbol">Favorite Symbol(s)</label>
         <input type="text" id="fav_symbol" name="fav_symbol" value="{{if .FavSymbol}}{{.FavSymbol}}{{end}}">
         <br>
-        <label for="wise_word">Wise Word:</label>
+        <label for="wise_word">Wise Word</label>
         <input type="text" id="wise_word" name="wise_word" value="{{if .WiseWord}}{{.WiseWord}}{{end}}">
         <br>
         <input type="submit" value="Update Profile">
     </form>
+    <script>
+        function validateEmail() {
+            const email = document.getElementById('email').value;
+            if (!email.includes('@')) {
+                alert('Please enter a valid email address.');
+                return false;
+            }
+            return true;
+        }
+    </script>
 </body>
 </html>

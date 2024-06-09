@@ -705,8 +705,8 @@ func userProfileHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		log.Println("Updated cookie for username:", newUsername)
 
-		// Redirect to the user account page
-		http.Redirect(w, r, "/user_account", http.StatusSeeOther)
+		// Redirect to the user account page with a success message
+		http.Redirect(w, r, "/user_account?updated=true", http.StatusSeeOther)
 		return
 	}
 
