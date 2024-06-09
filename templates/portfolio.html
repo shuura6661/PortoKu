@@ -3,49 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio</title>
+    <title>Your Portfolio</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#portfolioTable').DataTable({
+                "columnDefs": [
+                    { "orderable": false, "targets": 7 } // Disable sorting on the Actions column
+                ]
+            });
+        });
+    </script>
+    <style>
+        body {
+            padding: 40px; /* Add some space around the content */
+        }
+        .add-symbol-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .add-symbol-btn:hover {
+            background-color: #0056b3;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline;
+            margin-right: 20px;
+        }
+        nav ul li a {
+            text-decoration: none;
+            color: #007bff;
+        }
+        nav ul li a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <div class="dashboard">
-        <header>
-            <nav>
-                <ul>
-                    <li><a href="/">PortoKu</a></li>
-                    <li><a href="/dashboard">Dashboard</a></li>
-                    <li><a href="/portfolio">Portfolio</a></li>
-                </ul>
-            </nav>
-        </header>
-        <div class="dashboard-content">
-            <h2>Your Portfolio</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Total Lot</th>
-                        <th>Average Price</th>
-                        <th>Total Invested</th>
-                        <th>Current Price</th>
-                        <th>PnL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .}}
-                    <tr>
-                        <td>{{.Symbol}}</td>
-                        <td>{{.Lot}}</td>
-                        <td>${{.AveragePrice}}</td>
-                        <td>${{.TotalInvested}}</td>
-                        <td>${{.CurrentPrice}}</td>
-                        <td>${{.PnL}}</td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
-            <a href="/add_symbol" class="auth-button">Add New Symbol</a>
-        </div>
-    </div>
-    <script src="/static/scripts.js"></script>
+    <nav>
+        <ul>
+            <li><a href="/">PortoKu</a></li>
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/portfolio">Portfolio</a></li>
+        </ul>
+    </nav>
+    <h1>Your Portfolio</h1>
+    <table id="portfolioTable" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Total Lot</th>
+                <th>Average Price</th>
+                <th>Total Invested</th>
+                <th>Current Price</th>
+                <th>PnL</th>
+                <th>Percentage</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .}}
+            <tr>
+                <td>{{.ShortName}}</td>
+                <td>{{printf "%.2f" .Lot}}</td>
+                <td>${{printf "%.2f" .AveragePrice}}</td>
+                <td>${{printf "%.2f" .TotalInvested}}</td>
+                <td>${{printf "%.2f" .CurrentPrice}}</td>
+                <td>${{printf "%.2f" .PnL}}</td>
+                <td>{{printf "%.2f" .Percentage}}%</td>
+                <td>
+                    <a href="/edit_symbol?id={{.ID}}">Edit</a> |
+                    <a href="/delete_symbol?id={{.ID}}">Delete</a>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    <a href="/add_symbol" class="add-symbol-btn">Add New Symbol</a>
 </body>
 </html>

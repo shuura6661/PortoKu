@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/go-echarts/go-echarts/charts"
@@ -402,14 +403,46 @@ func addSymbolHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "POST" {
 		symbol := r.FormValue("symbol")
-		lot := r.FormValue("lot")
-		averagePrice := r.FormValue("average_price")
-		totalInvested := r.FormValue("total_invested")
-
-		_, err := db.Exec("INSERT INTO portfolios (username, symbol, lot, average_price, total_invested) VALUES (?, ?, ?, ?, ?)", username, symbol, lot, averagePrice, totalInvested)
+		lot, err := strconv.ParseFloat(r.FormValue("lot"), 64)
 		if err != nil {
-			http.Error(w, "Error adding symbol to portfolio", http.StatusInternalServerError)
+			http.Error(w, "Invalid lot value", http.StatusBadRequest)
 			return
+		}
+		averagePrice, err := strconv.ParseFloat(r.FormValue("average_price"), 64)
+		if err != nil {
+			http.Error(w, "Invalid average price value", http.StatusBadRequest)
+			return
+		}
+
+		q, err := quote.Get(symbol)
+		if err != nil {
+			http.Error(w, "Error fetching quote data", http.StatusInternalServerError)
+			return
+		}
+
+		shortName := q.ShortName
+
+		// Check if the symbol already exists in the portfolio
+		var existingLot float64
+		var existingAveragePrice float64
+		err = db.QueryRow("SELECT lot, average_price FROM portfolios WHERE username = ? AND short_name = ?", username, shortName).Scan(&existingLot, &existingAveragePrice)
+		if err == nil {
+			// Update the existing symbol
+			newLot := existingLot + lot
+			newAveragePrice := ((existingLot * existingAveragePrice) + (lot * averagePrice)) / newLot
+			_, err = db.Exec("UPDATE portfolios SET lot = ?, average_price = ?, total_invested = ? WHERE username = ? AND short_name = ?", newLot, newAveragePrice, newLot*newAveragePrice, username, shortName)
+			if err != nil {
+				http.Error(w, "Error updating existing symbol in portfolio", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// Insert a new symbol
+			totalInvested := lot * averagePrice
+			_, err = db.Exec("INSERT INTO portfolios (username, symbol, short_name, lot, average_price, total_invested) VALUES (?, ?, ?, ?, ?, ?)", username, symbol, shortName, lot, averagePrice, totalInvested)
+			if err != nil {
+				http.Error(w, "Error adding symbol to portfolio", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		http.Redirect(w, r, "/portfolio", http.StatusSeeOther)
@@ -424,13 +457,99 @@ func addSymbolHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
+func editSymbolHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("username")
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	username := cookie.Value
+
+	if r.Method == "POST" {
+		id := r.FormValue("id")
+		lot, err := strconv.ParseFloat(r.FormValue("lot"), 64)
+		if err != nil {
+			http.Error(w, "Invalid lot value", http.StatusBadRequest)
+			return
+		}
+		averagePrice, err := strconv.ParseFloat(r.FormValue("average_price"), 64)
+		if err != nil {
+			http.Error(w, "Invalid average price value", http.StatusBadRequest)
+			return
+		}
+
+		totalInvested := lot * averagePrice
+
+		_, err = db.Exec("UPDATE portfolios SET lot = ?, average_price = ?, total_invested = ? WHERE id = ? AND username = ?", lot, averagePrice, totalInvested, id, username)
+		if err != nil {
+			http.Error(w, "Error updating symbol in portfolio", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/portfolio", http.StatusSeeOther)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+	row := db.QueryRow("SELECT id, symbol, lot, average_price FROM portfolios WHERE id = ? AND username = ?", id, username)
+	var symbol string
+	var lot float64
+	var averagePrice float64
+
+	err = row.Scan(&id, &symbol, &lot, &averagePrice)
+	if err != nil {
+		http.Error(w, "Error fetching symbol data", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		ID           string
+		Symbol       string
+		Lot          float64
+		AveragePrice float64
+	}{
+		ID:           id,
+		Symbol:       symbol,
+		Lot:          lot,
+		AveragePrice: averagePrice,
+	}
+
+	tmpl, err := template.ParseFiles("templates/edit_symbol.html")
+	if err != nil {
+		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, data)
+}
+
+func deleteSymbolHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("username")
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	username := cookie.Value
+
+	id := r.URL.Query().Get("id")
+	_, err = db.Exec("DELETE FROM portfolios WHERE id = ? AND username = ?", id, username)
+	if err != nil {
+		http.Error(w, "Error deleting symbol from portfolio", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/portfolio", http.StatusSeeOther)
+}
+
 type PortfolioData struct {
+	ID            int
 	Symbol        string
-	Lot           int
+	ShortName     string
+	Lot           float64
 	AveragePrice  float64
 	TotalInvested float64
 	CurrentPrice  float64
 	PnL           float64
+	Percentage    float64
 }
 
 func portfolioHandler(w http.ResponseWriter, r *http.Request) {
@@ -441,7 +560,7 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	username := cookie.Value
 
-	rows, err := db.Query("SELECT symbol, lot, average_price, total_invested FROM portfolios WHERE username = ?", username)
+	rows, err := db.Query("SELECT id, symbol, short_name, lot, average_price FROM portfolios WHERE username = ?", username)
 	if err != nil {
 		http.Error(w, "Error fetching portfolio data", http.StatusInternalServerError)
 		return
@@ -449,16 +568,21 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	var portfolio []PortfolioData
+	var totalInvestedSum float64
 
 	for rows.Next() {
-		var symbol string
-		var lot int
-		var averagePrice, totalInvested float64
-		err := rows.Scan(&symbol, &lot, &averagePrice, &totalInvested)
+		var id int
+		var symbol, shortName string
+		var lot float64
+		var averagePrice float64
+		err := rows.Scan(&id, &symbol, &shortName, &lot, &averagePrice)
 		if err != nil {
 			http.Error(w, "Error scanning portfolio data", http.StatusInternalServerError)
 			return
 		}
+
+		totalInvested := lot * averagePrice
+		totalInvestedSum += totalInvested
 
 		q, err := quote.Get(symbol)
 		if err != nil {
@@ -467,16 +591,22 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		currentPrice := q.RegularMarketPrice
-		pnl := float64(lot) * (currentPrice - averagePrice)
+		pnl := lot * (currentPrice - averagePrice)
 
 		portfolio = append(portfolio, PortfolioData{
+			ID:            id,
 			Symbol:        symbol,
+			ShortName:     shortName,
 			Lot:           lot,
 			AveragePrice:  averagePrice,
 			TotalInvested: totalInvested,
 			CurrentPrice:  currentPrice,
-			PnL:           pnl,
+			PnL:           math.Round(pnl*100) / 100, // Round to 2 decimal places
 		})
+	}
+
+	for i := range portfolio {
+		portfolio[i].Percentage = (portfolio[i].TotalInvested / totalInvestedSum) * 100
 	}
 
 	tmpl, err := template.ParseFiles("templates/portfolio.html")
@@ -506,6 +636,8 @@ func main() {
 	http.HandleFunc("/dashboard", dashboardHandler)
 	http.HandleFunc("/portfolio", portfolioHandler)
 	http.HandleFunc("/add_symbol", addSymbolHandler)
+	http.HandleFunc("/edit_symbol", editSymbolHandler)
+	http.HandleFunc("/delete_symbol", deleteSymbolHandler)
 
 	http.HandleFunc("/quote", quoteHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))

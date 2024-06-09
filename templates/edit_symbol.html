@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Symbol</title>
+    <title>Edit Symbol</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -18,15 +18,16 @@
             </nav>
         </header>
         <div class="dashboard-content">
-            <h2>Add Symbol to Portfolio</h2>
-            <form action="/add_symbol" method="post">
+            <h2>Edit Symbol</h2>
+            <form action="/edit_symbol" method="post">
+                <input type="hidden" name="id" value="{{.ID}}">
                 <label for="symbol">Symbol:</label>
-                <input type="text" id="symbol" name="symbol" required>
+                <input type="text" id="symbol" name="symbol" value="{{.Symbol}}" readonly>
                 <label for="lot">Total Lot:</label>
-                <input type="number" step="0.01" id="lot" name="lot" required>
+                <input type="number" step="0.01" id="lot" name="lot" value="{{.Lot}}" required>
                 <label for="average_price">Average Price:</label>
-                <input type="text" id="average_price" name="average_price" required>
-                <input type="submit" value="Add Symbol">
+                <input type="text" id="average_price" name="average_price" value="{{.AveragePrice}}" required>
+                <input type="submit" value="Update Symbol">
             </form>
         </div>
     </div>
