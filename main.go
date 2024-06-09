@@ -160,6 +160,13 @@ type ResultData struct {
 	ChartHTML        template.HTML
 }
 
+type FavoriteSymbolData struct {
+	ShortName    string
+	CurrentPrice float64
+	Volume       int64
+	MarketCap    string
+}
+
 // Chart rendering functions
 func fetchChartData(sym string) ([]string, []float64) {
 	now := time.Now()
@@ -373,7 +380,6 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil {
 		log.Println("Username cookie not found, redirecting to login")
-		// If cookie is not found, redirect to login
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
@@ -381,12 +387,73 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	username := cookie.Value
 	log.Println("Username from cookie:", username)
 
+	var user struct {
+		Username string
+		WiseWord string
+	}
+
+	err = db.QueryRow("SELECT username, wise_word FROM users WHERE username = ?", username).Scan(&user.Username, &user.WiseWord)
+	if err != nil {
+		log.Println("Error fetching user data:", err)
+		http.Error(w, "Error fetching user data", http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := db.Query("SELECT fav_symbol FROM users WHERE username = ?", username)
+	if err != nil {
+		http.Error(w, "Error fetching favorite symbols", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var favSymbols []string
+	for rows.Next() {
+		var favSymbol string
+		err := rows.Scan(&favSymbol)
+		if err != nil {
+			http.Error(w, "Error scanning favorite symbols", http.StatusInternalServerError)
+			return
+		}
+		favSymbols = append(favSymbols, favSymbol)
+	}
+
+	var favoriteSymbols []FavoriteSymbolData
+	for _, symbol := range favSymbols {
+		q, err := quote.Get(symbol)
+		if err != nil {
+			log.Println("Error fetching quote data:", err)
+			continue
+		}
+		e, err := equity.Get(symbol)
+		if err != nil {
+			log.Println("Error fetching equity data:", err)
+			continue
+		}
+
+		favoriteSymbols = append(favoriteSymbols, FavoriteSymbolData{
+			ShortName:    q.ShortName,
+			CurrentPrice: q.RegularMarketPrice,
+			Volume:       int64(q.RegularMarketVolume),
+			MarketCap:    fmt.Sprintf("$%.2fB", float64(e.MarketCap)/1e9),
+		})
+	}
+
+	data := struct {
+		Username        string
+		WiseWord        string
+		FavoriteSymbols []FavoriteSymbolData
+	}{
+		Username:        user.Username,
+		WiseWord:        user.WiseWord,
+		FavoriteSymbols: favoriteSymbols,
+	}
+
 	tmpl, err := template.ParseFiles("templates/dashboard.html")
 	if err != nil {
 		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = tmpl.Execute(w, struct{ Username string }{Username: username})
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
 		return
