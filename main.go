@@ -621,6 +621,101 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func userProfileHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("username")
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	username := cookie.Value
+
+	if r.Method == "POST" {
+		email := r.FormValue("email")
+		phone := r.FormValue("phone")
+		birthdate := r.FormValue("birthdate")
+		investmentProfile := r.FormValue("investment_profile")
+		investmentGoals, _ := strconv.ParseFloat(r.FormValue("investment_goals"), 64)
+		riskTolerance, _ := strconv.ParseFloat(r.FormValue("risk_tolerance"), 64)
+		favSymbol := r.FormValue("fav_symbol")
+		wiseWord := r.FormValue("wise_word")
+
+		_, err = db.Exec(`UPDATE users 
+            SET email = ?, phone = ?, birthdate = ?, investment_profile = ?, 
+            investment_goals = ?, risk_tolerance = ?, fav_symbol = ?, wise_word = ?
+            WHERE username = ?`, email, phone, birthdate, investmentProfile, investmentGoals, riskTolerance, favSymbol, wiseWord, username)
+		if err != nil {
+			log.Println("Error updating user profile:", err)
+			http.Error(w, "Error updating user profile", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/user_account", http.StatusSeeOther)
+		return
+	}
+
+	var user struct {
+		Username          string
+		Email             sql.NullString
+		Phone             sql.NullString
+		Birthdate         sql.NullString
+		InvestmentProfile sql.NullString
+		InvestmentGoals   sql.NullFloat64
+		RiskTolerance     sql.NullFloat64
+		FavSymbol         sql.NullString
+		WiseWord          sql.NullString
+	}
+
+	err = db.QueryRow(`SELECT username, 
+        email, 
+        phone, 
+        birthdate, 
+        investment_profile, 
+        investment_goals, 
+        risk_tolerance, 
+        fav_symbol, 
+        wise_word 
+        FROM users WHERE username = ?`, username).Scan(
+		&user.Username, &user.Email, &user.Phone, &user.Birthdate, &user.InvestmentProfile, &user.InvestmentGoals, &user.RiskTolerance, &user.FavSymbol, &user.WiseWord)
+	if err != nil {
+		log.Println("Error fetching user data:", err)
+		http.Error(w, "Error fetching user data", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Username          string
+		Email             string
+		Phone             string
+		Birthdate         string
+		InvestmentProfile string
+		InvestmentGoals   float64
+		RiskTolerance     float64
+		FavSymbol         string
+		WiseWord          string
+	}{
+		Username:          user.Username,
+		Email:             user.Email.String,
+		Phone:             user.Phone.String,
+		Birthdate:         user.Birthdate.String,
+		InvestmentProfile: user.InvestmentProfile.String,
+		InvestmentGoals:   user.InvestmentGoals.Float64,
+		RiskTolerance:     user.RiskTolerance.Float64,
+		FavSymbol:         user.FavSymbol.String,
+		WiseWord:          user.WiseWord.String,
+	}
+
+	tmpl, err := template.ParseFiles("templates/user_account.html")
+	if err != nil {
+		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("templates/index.html")
@@ -638,6 +733,7 @@ func main() {
 	http.HandleFunc("/add_symbol", addSymbolHandler)
 	http.HandleFunc("/edit_symbol", editSymbolHandler)
 	http.HandleFunc("/delete_symbol", deleteSymbolHandler)
+	http.HandleFunc("/user_account", userProfileHandler)
 
 	http.HandleFunc("/quote", quoteHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
