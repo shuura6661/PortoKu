@@ -30,8 +30,8 @@ This project is a Portfolio Invesment application that allows users to manage th
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/yourusername/stock-trader-dashboard.git
-   cd stock-trader-dashboard
+   git clone https://github.com/shuura6661/PortoKu.git
+   cd PortoKu
 2. Install dependencies:
    ```sh
    go mod tidy
