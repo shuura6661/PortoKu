@@ -66,7 +66,7 @@ This project is a Portfolio Invesment application that allows users to manage th
 
 ## Project Structure
 ```sh
-stock-trader-dashboard/
+PortoKu/
 │
 ├── templates/
 │   ├── index.html
