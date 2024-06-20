@@ -24,9 +24,9 @@
         </header>
         <div class="dashboard-content">
             <div class="stats">
-                <div class="stat-box">Equity: ${{printf "%.2f" .TotalInvested}}</div>
-                <div class="stat-box">Total Return: ${{printf "%.2f" .PnL}}</div>
-                <div class="stat-box">You're ${{printf "%.2f" (subtract .InvestmentGoals .TotalInvested)}} away from your dream!</div>
+                <div class="stat-box">Equity: {{formatNumber .TotalInvested}}</div>
+                <div class="stat-box">Total Return: {{formatNumber .PnL}}</div>
+                <div class="stat-box">You're {{formatNumber (subtract .InvestmentGoals .TotalInvested)}} away from your dream!</div>
             </div>
             <div class="search-market">
                 <h2>Symbol Viewer/AI Features Fibonacci Levels</h2>
@@ -61,12 +61,12 @@
                         {{range .FavoriteSymbols}}
                         <tr>
                             <td>{{.Symbol}}</td>
-                            <td>${{printf "%.2f" .CurrentPrice}}</td>
-                            <td>${{printf "%.2f" .RegularMarketDayLow}}</td>
-                            <td>${{printf "%.2f" .RegularMarketDayHigh}}</td>
+                            <td>{{formatNumber .CurrentPrice}}</td>
+                            <td>{{formatNumber .RegularMarketDayLow}}</td>
+                            <td>{{formatNumber .RegularMarketDayHigh}}</td>
                             <td>{{printf "%.2f" .RegularMarketChangePercent}}%</td>
                             <td>{{.RegularMarketVolume}}</td>
-                            <td>${{printf "%.2f" .MarketCap}}</td>
+                            <td>{{formatNumber .MarketCap}}</td>
                         </tr>
                         {{end}}
                     </tbody>

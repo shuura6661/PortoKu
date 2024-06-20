@@ -81,10 +81,10 @@
             <tr>
                 <td>{{.ShortName}}</td>
                 <td>{{printf "%.2f" .Lot}}</td>
-                <td>${{printf "%.2f" .AveragePrice}}</td>
-                <td>${{printf "%.2f" .TotalInvested}}</td>
-                <td>${{printf "%.2f" .CurrentPrice}}</td>
-                <td>${{printf "%.2f" .PnL}}</td>
+                <td>{{formatNumber .AveragePrice}}</td>
+                <td>{{formatNumber .TotalInvested}}</td>
+                <td>{{formatNumber .CurrentPrice}}</td>
+                <td>{{formatNumber .PnL}}</td>
                 <td>{{printf "%.2f" .Percentage}}%</td>
                 <td>
                     <a href="/edit_symbol?id={{.ID}}">Edit</a> |
