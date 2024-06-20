@@ -34,6 +34,7 @@
                 </div>
                 <div class="trade-ideas">
                     <h3>Trade Ideas</h3>
+                    <p>Zone: {{if eq .Zone "Buy"}}BUY{{else}}SELL{{end}}</p> <!-- Add this line to display the zone -->
                     <ul>
                         {{range .TradeIdeas}}
                         <li>Index: {{.Index}}, Take Profit: ${{.TakeProfit}}, Pips: ${{.Pips}}, Risk/Reward Ratio: {{.RiskRewardRatio}}</li>
