@@ -23,6 +23,36 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func formatNumber(value float64) string {
+	return fmt.Sprintf("$%s", commaFormat(value))
+}
+
+func commaFormat(value float64) string {
+	parts := strings.Split(fmt.Sprintf("%.2f", value), ".")
+	integerPart := parts[0]
+	decimalPart := parts[1]
+
+	var result strings.Builder
+	if len(integerPart) > 0 && integerPart[0] == '-' {
+		result.WriteByte('-')
+		integerPart = integerPart[1:]
+	}
+
+	for i, digit := range integerPart {
+		if i > 0 && (len(integerPart)-i)%3 == 0 {
+			result.WriteByte(',')
+		}
+		result.WriteRune(digit)
+	}
+
+	if decimalPart != "" {
+		result.WriteByte('.')
+		result.WriteString(decimalPart)
+	}
+
+	return result.String()
+}
+
 var db *sql.DB
 var err error
 
@@ -162,6 +192,7 @@ type ResultData struct {
 	FibonacciLevels            []FibLevel
 	TradeIdeas                 []TradeIdea
 	ChartHTML                  template.HTML
+	Zone                       string // Add this field to store the zone information
 }
 
 // Chart rendering functions
@@ -335,6 +366,7 @@ func displayFibonacciLevels(smbl string) (ResultData, error) {
 		FibonacciLevels:            fibSlice,
 		TradeIdeas:                 tradeIdeas,
 		ChartHTML:                  renderChart(smbl),
+		Zone:                       zone, // Include the zone information in the result
 	}, nil
 }
 
@@ -389,7 +421,6 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil {
 		log.Println("Username cookie not found, redirecting to login")
-		// If cookie is not found, redirect to login
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
@@ -399,7 +430,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 	var user struct {
 		Username        string
-		InvestmentGoals float64
+		InvestmentGoals sql.NullFloat64
 		WiseWord        sql.NullString
 		FavSymbol       sql.NullString
 	}
@@ -409,6 +440,13 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error fetching user data:", err)
 		http.Error(w, "Error fetching user data", http.StatusInternalServerError)
+		return
+	}
+
+	// Update portfolio data before retrieving it
+	err = updatePortfolioData(username)
+	if err != nil {
+		http.Error(w, "Error updating portfolio data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -441,9 +479,12 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error scanning portfolio data", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("Fetched: total_invested = %f, pnl = %f\n", totalInvestedVal, pnlVal)
 		totalInvested += totalInvestedVal
 		totalPnL += pnlVal
 	}
+
+	log.Printf("Total Invested: %f, Total PnL: %f\n", totalInvested, totalPnL)
 
 	data := struct {
 		Username        string
@@ -456,7 +497,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 		Username:        user.Username,
 		TotalInvested:   totalInvested,
 		PnL:             totalPnL,
-		InvestmentGoals: user.InvestmentGoals,
+		InvestmentGoals: user.InvestmentGoals.Float64,
 		WiseWord:        user.WiseWord.String,
 		FavoriteSymbols: favoriteSymbols,
 	}
@@ -465,6 +506,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 		"subtract": func(a, b float64) float64 {
 			return a - b
 		},
+		"formatNumber": formatNumber, // Add the formatNumber function to the template FuncMap
 	}
 
 	tmpl, err := template.New("dashboard.html").Funcs(funcMap).ParseFiles("templates/dashboard.html")
@@ -638,6 +680,40 @@ type PortfolioData struct {
 	Percentage    float64
 }
 
+func updatePortfolioData(username string) error {
+	rows, err := db.Query("SELECT id, symbol, lot, average_price FROM portfolios WHERE username = ?", username)
+	if err != nil {
+		return fmt.Errorf("error fetching portfolio data: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int
+		var symbol string
+		var lot float64
+		var averagePrice float64
+		err := rows.Scan(&id, &symbol, &lot, &averagePrice)
+		if err != nil {
+			return fmt.Errorf("error scanning portfolio data: %w", err)
+		}
+
+		q, err := quote.Get(symbol)
+		if err != nil {
+			return fmt.Errorf("error fetching quote data: %w", err)
+		}
+
+		currentPrice := q.RegularMarketPrice
+		pnl := lot * (currentPrice - averagePrice)
+
+		_, err = db.Exec("UPDATE portfolios SET current_price = ?, pnl = ? WHERE id = ?", currentPrice, pnl, id)
+		if err != nil {
+			return fmt.Errorf("error updating portfolio data: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil {
@@ -646,7 +722,14 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	username := cookie.Value
 
-	rows, err := db.Query("SELECT id, symbol, short_name, lot, average_price FROM portfolios WHERE username = ?", username)
+	// Update portfolio data before retrieving it
+	err = updatePortfolioData(username)
+	if err != nil {
+		http.Error(w, "Error updating portfolio data: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := db.Query("SELECT id, symbol, short_name, lot, average_price, current_price, pnl FROM portfolios WHERE username = ?", username)
 	if err != nil {
 		http.Error(w, "Error fetching portfolio data", http.StatusInternalServerError)
 		return
@@ -655,13 +738,16 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 
 	var portfolio []PortfolioData
 	var totalInvestedSum float64
+	var totalPnL float64
 
 	for rows.Next() {
 		var id int
 		var symbol, shortName string
 		var lot float64
 		var averagePrice float64
-		err := rows.Scan(&id, &symbol, &shortName, &lot, &averagePrice)
+		var currentPrice float64
+		var pnl float64
+		err := rows.Scan(&id, &symbol, &shortName, &lot, &averagePrice, &currentPrice, &pnl)
 		if err != nil {
 			http.Error(w, "Error scanning portfolio data", http.StatusInternalServerError)
 			return
@@ -669,15 +755,7 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 
 		totalInvested := lot * averagePrice
 		totalInvestedSum += totalInvested
-
-		q, err := quote.Get(symbol)
-		if err != nil {
-			http.Error(w, "Error fetching quote data", http.StatusInternalServerError)
-			return
-		}
-
-		currentPrice := q.RegularMarketPrice
-		pnl := lot * (currentPrice - averagePrice)
+		totalPnL += pnl
 
 		portfolio = append(portfolio, PortfolioData{
 			ID:            id,
@@ -695,7 +773,11 @@ func portfolioHandler(w http.ResponseWriter, r *http.Request) {
 		portfolio[i].Percentage = (portfolio[i].TotalInvested / totalInvestedSum) * 100
 	}
 
-	tmpl, err := template.ParseFiles("templates/portfolio.html")
+	funcMap := template.FuncMap{
+		"formatNumber": formatNumber, // Add the formatNumber function to the template FuncMap
+	}
+
+	tmpl, err := template.New("portfolio.html").Funcs(funcMap).ParseFiles("templates/portfolio.html")
 	if err != nil {
 		http.Error(w, "Error parsing template: "+err.Error(), http.StatusInternalServerError)
 		return
