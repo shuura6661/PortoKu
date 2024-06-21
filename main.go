@@ -188,7 +188,7 @@ type ResultData struct {
 	RegularMarketDayLow        float64
 	RegularMarketDayHigh       float64
 	RegularMarketChangePercent float64
-	RegularMarketVolume        int64
+	RegularMarketVolume        float64
 	FibonacciLevels            []FibLevel
 	TradeIdeas                 []TradeIdea
 	ChartHTML                  template.HTML
@@ -274,7 +274,7 @@ func displaySymbolViewer(smbl string) (ResultData, error) {
 		RegularMarketDayLow:        q.RegularMarketDayLow,
 		RegularMarketDayHigh:       q.RegularMarketDayHigh,
 		RegularMarketChangePercent: q.RegularMarketChangePercent,
-		RegularMarketVolume:        int64(q.RegularMarketVolume),
+		RegularMarketVolume:        float64(q.RegularMarketVolume),
 		ChartHTML:                  renderChart(smbl),
 	}, nil
 }
@@ -362,7 +362,7 @@ func displayFibonacciLevels(smbl string) (ResultData, error) {
 		RegularMarketDayLow:        q.RegularMarketDayLow,
 		RegularMarketDayHigh:       q.RegularMarketDayHigh,
 		RegularMarketChangePercent: q.RegularMarketChangePercent,
-		RegularMarketVolume:        int64(q.RegularMarketVolume),
+		RegularMarketVolume:        float64(q.RegularMarketVolume),
 		FibonacciLevels:            fibSlice,
 		TradeIdeas:                 tradeIdeas,
 		ChartHTML:                  renderChart(smbl),
@@ -485,11 +485,13 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Total Invested: %f, Total PnL: %f\n", totalInvested, totalPnL)
-
+	// Calculate Equity
+	equity := totalInvested + totalPnL
 	data := struct {
 		Username        string
 		TotalInvested   float64
 		PnL             float64
+		Equity          float64
 		InvestmentGoals float64
 		WiseWord        string
 		FavoriteSymbols []ResultData
@@ -497,6 +499,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 		Username:        user.Username,
 		TotalInvested:   totalInvested,
 		PnL:             totalPnL,
+		Equity:          equity,
 		InvestmentGoals: user.InvestmentGoals.Float64,
 		WiseWord:        user.WiseWord.String,
 		FavoriteSymbols: favoriteSymbols,

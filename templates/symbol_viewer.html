@@ -25,8 +25,8 @@
                     <p>Current Price: ${{.CurrentPrice}}</p>
                     <p>52-Week High: ${{.FiftyTwoWeekHigh}}</p>
                     <p>52-Week Low: ${{.FiftyTwoWeekLow}}</p>
-                    <p>Market Cap: ${{.MarketCap}}</p>
-                    <p>Book Value: ${{.BookValue}}</p>
+                    <p>Market Cap: {{formatNumber .MarketCap}}</p>
+                    <p>Book Value: {{formatNumber .BookValue}}</p>
                 </div>
             </div>
         </div>
