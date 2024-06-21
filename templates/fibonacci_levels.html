@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fibonacci Levels</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .indented {
+            margin-left: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard">
@@ -34,10 +39,14 @@
                 </div>
                 <div class="trade-ideas">
                     <h3>Trade Ideas</h3>
-                    <p>Zone: {{if eq .Zone "Buy"}}BUY{{else}}SELL{{end}}</p> <!-- Add this line to display the zone -->
+                    <p>Zone: {{if eq .Zone "Buy"}}BUY{{else}}SELL{{end}}</p>
                     <ul>
                         {{range .TradeIdeas}}
-                        <li>Index: {{.Index}}, Take Profit: ${{.TakeProfit}}, Pips: ${{.Pips}}, Risk/Reward Ratio: {{.RiskRewardRatio}}</li>
+                        <li>
+                            {{.Index}}. Take Profit: ${{.TakeProfit}}<br>
+                            <span class="indented">Pips: {{.Pips}}</span><br>
+                            <span class="indented">Risk/Reward Ratio: {{.RiskRewardRatio}}</span>
+                        </li>
                         {{end}}
                     </ul>
                 </div>

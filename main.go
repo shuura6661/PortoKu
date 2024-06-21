@@ -192,10 +192,11 @@ type ResultData struct {
 	RegularMarketDayHigh       float64
 	RegularMarketChangePercent float64
 	RegularMarketVolume        float64
+	BookValue                  float64 // Add this field
 	FibonacciLevels            []FibLevel
 	TradeIdeas                 []TradeIdea
 	ChartHTML                  template.HTML
-	Zone                       string // Add this field to store the zone information
+	Zone                       string
 }
 
 // Chart rendering functions
@@ -278,6 +279,7 @@ func displaySymbolViewer(smbl string) (ResultData, error) {
 		RegularMarketDayHigh:       q.RegularMarketDayHigh,
 		RegularMarketChangePercent: q.RegularMarketChangePercent,
 		RegularMarketVolume:        float64(q.RegularMarketVolume),
+		BookValue:                  e.BookValue, // Populate the BookValue field
 		ChartHTML:                  renderChart(smbl),
 	}, nil
 }
