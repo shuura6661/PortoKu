@@ -65,7 +65,7 @@
                             <td>{{formatNumber .RegularMarketDayLow}}</td>
                             <td>{{formatNumber .RegularMarketDayHigh}}</td>
                             <td>{{printf "%.2f" .RegularMarketChangePercent}}%</td>
-                            <td>{{formatNumber .RegularMarketVolume}}</td>
+                            <td>{{formatNumbernoDollar .RegularMarketVolume}}</td>
                             <td>{{formatNumber .MarketCap}}</td>
                         </tr>
                         {{end}}

@@ -26,6 +26,9 @@ import (
 func formatNumber(value float64) string {
 	return fmt.Sprintf("$%s", commaFormat(value))
 }
+func formatNumbernoDollar(value float64) string {
+	return commaFormat(value)
+}
 
 func commaFormat(value float64) string {
 	parts := strings.Split(fmt.Sprintf("%.2f", value), ".")
@@ -509,7 +512,8 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 		"subtract": func(a, b float64) float64 {
 			return a - b
 		},
-		"formatNumber": formatNumber, // Add the formatNumber function to the template FuncMap
+		"formatNumber":         formatNumber, // Add the formatNumber function to the template FuncMap
+		"formatNumbernoDollar": formatNumbernoDollar,
 	}
 
 	tmpl, err := template.New("dashboard.html").Funcs(funcMap).ParseFiles("templates/dashboard.html")
